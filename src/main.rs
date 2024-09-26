@@ -13,14 +13,35 @@ struct GameCollection {
     value: i32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 enum Message {
-    Increment,
-    Decrement,
+    AddGame,
+    Games,
+    Home,
+    Settings,
+    About,
 }
 
 impl GameCollection {
-    fn update(&mut self, message: Message) {}
+    fn update(&mut self, message: Message) {
+        match message {
+            Message::AddGame => {
+                println!("Add game");
+            }
+            Message::Games => {
+                println!("Games");
+            }
+            Message::Home => {
+                println!("Home");
+            }
+            Message::Settings => {
+                println!("Settings");
+            }
+            Message::About => {
+                println!("About");
+            }
+        }
+    }
 
     fn view(&self) -> Element<Message> {
         let header = container(
@@ -30,10 +51,11 @@ impl GameCollection {
         );
         let sidebar = container(
             column![
-                button("Home"),
-                button("Games"),
-                button("Settings"),
-                button("About"),
+                button("Home").on_press(Message::Home),
+                button("Add game").on_press(Message::AddGame),
+                button("Games").on_press(Message::Games),
+                button("Settings").on_press(Message::Settings),
+                button("About").on_press(Message::About),
             ]
             .padding(10),
         );
