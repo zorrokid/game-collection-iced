@@ -1,4 +1,4 @@
-use game_collection_iced::model::game::{self, Game, Identifiable, System};
+use game_collection_iced::model::game::{Game, Identifiable, System};
 use iced::widget::{button, column, container, horizontal_space, row, text, text_input, Column};
 use iced::{Center, Element};
 pub fn main() -> iced::Result {
