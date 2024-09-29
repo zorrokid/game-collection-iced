@@ -1,4 +1,4 @@
-use game_collection_iced::model::game::Game;
+use game_collection_iced::model::game::{self, Game, System};
 use iced::widget::{button, column, container, horizontal_space, row, text, text_input, Column};
 use iced::{Center, Element};
 pub fn main() -> iced::Result {
@@ -17,13 +17,16 @@ enum MainContent {
     Games,
     Settings,
     About,
+    AddSystem,
 }
 
 #[derive(Default)]
 struct GameCollection {
     main_content: MainContent,
     games: Vec<Game>,
-    selected_game_id: Option<u32>,
+    selected_game: Option<Game>,
+    systems: Vec<System>,
+    selected_system: Option<System>,
 }
 
 #[derive(Debug, Clone)]
@@ -35,15 +38,19 @@ enum Message {
     About,
     GameTitleChanged(String),
     EditGame(u32),
+    AddSystem,
+    SystemNameChanged(String),
+    EditSystem(u32),
+    CancelAddGame,
+    SaveGame,
 }
 
 impl GameCollection {
     fn update(&mut self, message: Message) {
         match message {
             Message::AddGame => {
-                let new_game = create_new_game(&self.games);
-                self.selected_game_id = Some(new_game.id);
-                self.games.push(new_game);
+                let new_game = Game::default();
+                self.selected_game = Some(new_game);
                 self.main_content = MainContent::AddGame;
             }
             Message::Games => {
@@ -59,15 +66,47 @@ impl GameCollection {
                 self.main_content = MainContent::About;
             }
             Message::GameTitleChanged(title) => {
-                if let Some(selected_game_id) = self.selected_game_id {
-                    if let Some(game) = self.games.iter_mut().find(|g| g.id == selected_game_id) {
-                        game.title = title;
-                    }
+                if let Some(selected_game_id) = &mut self.selected_game {
+                    selected_game_id.title = title;
                 }
             }
             Message::EditGame(game_id) => {
-                self.selected_game_id = Some(game_id);
+                self.selected_game = Some(self.games[game_id as usize].clone());
                 self.main_content = MainContent::AddGame;
+            }
+            Message::EditSystem(system_id) => {
+                self.selected_system = Some(self.systems[system_id as usize].clone());
+                self.main_content = MainContent::AddSystem;
+            }
+            Message::AddSystem => {
+                let new_system = System::default();
+                self.selected_system = Some(new_system);
+                self.main_content = MainContent::AddSystem;
+            }
+            Message::SystemNameChanged(name) => {
+                if let Some(selected_system_id) = &mut self.selected_system {
+                    selected_system_id.name = name;
+                }
+            }
+            Message::CancelAddGame => {
+                // the added game is the most recent one
+                self.selected_game = None;
+                self.main_content = MainContent::Home;
+            }
+            Message::SaveGame => {
+                if let Some(game) = &self.selected_game {
+                    if let Some(game_id) = game.id {
+                        self.games[game_id as usize] = game.clone();
+                    } else {
+                        let new_game = Game {
+                            id: Some(self.games.len() as u32),
+                            ..game.clone()
+                        };
+                        self.games.push(new_game);
+                    }
+                }
+                self.selected_game = None;
+                self.main_content = MainContent::Home;
             }
         }
     }
@@ -92,26 +131,15 @@ impl GameCollection {
         let content = match self.main_content {
             MainContent::Home => home_content(),
             MainContent::AddGame => add_game_content(
-                self.selected_game_id
-                    .and_then(|selected_game_id| {
-                        self.games.iter().find(|game| game.id == selected_game_id)
-                    })
-                    .unwrap(),
+                &self.selected_game.as_ref().unwrap(), /* TODO handler error */
             ),
             MainContent::Games => games_content(&self.games),
-            MainContent::Settings => settings_content(),
+            MainContent::Settings => settings_content(&self.systems),
             MainContent::About => about_content(),
+            MainContent::AddSystem => add_system_content(&self.selected_system.as_ref().unwrap()),
         };
 
         column![header, row![sidebar, content]].into()
-    }
-}
-
-fn create_new_game(games: &Vec<Game>) -> Game {
-    let new_game_id = games.len() as u32;
-    Game {
-        id: new_game_id,
-        title: "".to_string(),
     }
 }
 
@@ -128,15 +156,27 @@ fn add_game_content<'a>(game: &Game) -> Element<'a, Message> {
     column![
         text("Add game").size(50),
         text_input("Title", game.title.as_str()).on_input(|str| Message::GameTitleChanged(str)),
+        button("Cancel").on_press(Message::CancelAddGame),
+        button("Save").on_press(Message::SaveGame),
     ]
     .padding(20)
     .into()
 }
+
+fn add_system_content<'a>(system: &System) -> Element<'a, Message> {
+    column![
+        text("Add system").size(50),
+        text_input("Name", system.name.as_str()).on_input(|str| Message::SystemNameChanged(str)),
+    ]
+    .padding(20)
+    .into()
+}
+
 fn games_content<'a>(games: &'a Vec<Game>) -> Element<'a, Message> {
     let games_list = games.iter().map(|game| {
         row![
             text(game.title.as_str()),
-            button("Edit").on_press(Message::EditGame(game.id)),
+            button("Edit").on_press_maybe(game.id.map(Message::EditGame)),
         ]
         .into()
     });
@@ -147,8 +187,24 @@ fn games_content<'a>(games: &'a Vec<Game>) -> Element<'a, Message> {
         .padding(20)
         .into()
 }
-fn settings_content<'a>() -> Element<'a, Message> {
-    column![text("Settings").size(50),].padding(20).into()
+fn settings_content<'a>(systems: &'a Vec<System>) -> Element<'a, Message> {
+    let systems_list = systems.iter().map(|system| {
+        row![
+            text(system.name.as_str()),
+            button("Edit").on_press_maybe(system.id.map(Message::EditSystem)),
+        ]
+        .into()
+    });
+    let system_list_with_container =
+        Column::with_children(systems_list.collect::<Vec<Element<'a, Message>>>());
+    let add_new_system_button = button("Add new system").on_press(Message::AddSystem);
+    column![
+        text("Settings").size(50),
+        system_list_with_container,
+        add_new_system_button
+    ]
+    .padding(20)
+    .into()
 }
 fn about_content<'a>() -> Element<'a, Message> {
     column![text("About").size(50),].padding(20).into()
