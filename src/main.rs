@@ -9,8 +9,18 @@ pub fn main() -> iced::Result {
 }
 
 #[derive(Default)]
+enum MainContent {
+    #[default]
+    Home,
+    AddGame,
+    Games,
+    Settings,
+    About,
+}
+
+#[derive(Default)]
 struct GameCollection {
-    value: i32,
+    main_content: MainContent,
 }
 
 #[derive(Debug, Clone)]
@@ -59,6 +69,7 @@ impl GameCollection {
             ]
             .padding(10),
         );
+
         let content = container(
             column![
                 text("Welcome to Game Collection!").size(50),
