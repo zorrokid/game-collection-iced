@@ -37,23 +37,18 @@ impl GameCollection {
         match message {
             Message::AddGame => {
                 self.main_content = MainContent::AddGame;
-                println!("Add game");
             }
             Message::Games => {
                 self.main_content = MainContent::Games;
-                println!("Games");
             }
             Message::Home => {
                 self.main_content = MainContent::Home;
-                println!("Home");
             }
             Message::Settings => {
                 self.main_content = MainContent::Settings;
-                println!("Settings");
             }
             Message::About => {
                 self.main_content = MainContent::About;
-                println!("About");
             }
         }
     }
