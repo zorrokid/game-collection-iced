@@ -1,4 +1,4 @@
-use game_collection_iced::model::game::{self, Game, System};
+use game_collection_iced::model::game::{self, Game, Identifiable, System};
 use iced::widget::{button, column, container, horizontal_space, row, text, text_input, Column};
 use iced::{Center, Element};
 pub fn main() -> iced::Result {
@@ -101,32 +101,12 @@ impl GameCollection {
                 self.main_content = MainContent::Settings;
             }
             Message::SaveGame => {
-                if let Some(game) = &self.selected_game {
-                    if let Some(game_id) = game.id {
-                        self.games[game_id as usize] = game.clone();
-                    } else {
-                        let new_game = Game {
-                            id: Some(self.games.len() as u32),
-                            ..game.clone()
-                        };
-                        self.games.push(new_game);
-                    }
-                }
+                save(&mut self.games, &self.selected_game.as_ref().unwrap());
                 self.selected_game = None;
                 self.main_content = MainContent::Home;
             }
             Message::SaveSystem => {
-                if let Some(system) = &self.selected_system {
-                    if let Some(system_id) = system.id {
-                        self.systems[system_id as usize] = system.clone();
-                    } else {
-                        let new_system = System {
-                            id: Some(self.systems.len() as u32),
-                            ..system.clone()
-                        };
-                        self.systems.push(new_system);
-                    }
-                }
+                save(&mut self.systems, &self.selected_system.as_ref().unwrap());
                 self.selected_system = None;
                 self.main_content = MainContent::Settings;
             }
@@ -162,6 +142,16 @@ impl GameCollection {
         };
 
         column![header, row![sidebar, content]].into()
+    }
+}
+
+fn save<T: Identifiable + Clone>(items: &mut Vec<T>, item: &T) {
+    if let Some(id) = item.id() {
+        items[id as usize] = item.clone();
+    } else {
+        let mut new_item = item.clone();
+        new_item.set_id(items.len() as u32);
+        items.push(new_item);
     }
 }
 
