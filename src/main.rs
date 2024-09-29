@@ -31,18 +31,22 @@ struct GameCollection {
 
 #[derive(Debug, Clone)]
 enum Message {
-    AddGame,
-    Games,
     Home,
-    Settings,
+    Games,
     About,
-    GameTitleChanged(String),
-    EditGame(u32),
-    AddSystem,
-    SystemNameChanged(String),
-    EditSystem(u32),
+    Settings,
+    // Game
+    AddGame,
     CancelAddGame,
+    EditGame(u32),
+    GameTitleChanged(String),
     SaveGame,
+    // System
+    AddSystem,
+    CancelAddSystem,
+    EditSystem(u32),
+    SystemNameChanged(String),
+    SaveSystem,
 }
 
 impl GameCollection {
@@ -89,9 +93,12 @@ impl GameCollection {
                 }
             }
             Message::CancelAddGame => {
-                // the added game is the most recent one
                 self.selected_game = None;
                 self.main_content = MainContent::Home;
+            }
+            Message::CancelAddSystem => {
+                self.selected_system = None;
+                self.main_content = MainContent::Settings;
             }
             Message::SaveGame => {
                 if let Some(game) = &self.selected_game {
@@ -107,6 +114,21 @@ impl GameCollection {
                 }
                 self.selected_game = None;
                 self.main_content = MainContent::Home;
+            }
+            Message::SaveSystem => {
+                if let Some(system) = &self.selected_system {
+                    if let Some(system_id) = system.id {
+                        self.systems[system_id as usize] = system.clone();
+                    } else {
+                        let new_system = System {
+                            id: Some(self.systems.len() as u32),
+                            ..system.clone()
+                        };
+                        self.systems.push(new_system);
+                    }
+                }
+                self.selected_system = None;
+                self.main_content = MainContent::Settings;
             }
         }
     }
@@ -167,6 +189,8 @@ fn add_system_content<'a>(system: &System) -> Element<'a, Message> {
     column![
         text("Add system").size(50),
         text_input("Name", system.name.as_str()).on_input(|str| Message::SystemNameChanged(str)),
+        button("Cancel").on_press(Message::CancelAddSystem),
+        button("Save").on_press(Message::SaveSystem),
     ]
     .padding(20)
     .into()
